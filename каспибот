@@ -1,0 +1,40 @@
+from aiogram import Bot, Dispatcher, types, executor
+from aiogram.types import InputFile
+import asyncio
+import pytesseract
+from PIL import Image
+import io
+import datetime
+
+API_TOKEN = '8027612649:AAH009T3wBYmisB5XCSzZhAQiruiaJWdYAg'
+CHANNEL_ID = '-1002075264777'  # жабық каналыңның ID-сі
+PRICE = 1990
+
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher(bot)
+
+@dp.message_handler(content_types=types.ContentType.PHOTO)
+async def handle_check(message: types.Message):
+    photo = message.photo[-1]
+    photo_bytes = await photo.download(destination=io.BytesIO())
+    photo_bytes.seek(0)
+    image = Image.open(photo_bytes)
+    text = pytesseract.image_to_string(image, lang='eng+kaz+rus')
+
+    if str(PRICE) in text or "1 990" in text or "1990 т" in text:
+        await message.reply("Чек расталды! Қазір каналға қосамын.")
+
+        until_date = datetime.datetime.now() + datetime.timedelta(days=30)
+        await bot.send_message(CHANNEL_ID, f"{message.from_user.full_name} 1 айға қосылды.")
+        await bot.restrict_chat_member(CHANNEL_ID, message.from_user.id, permissions=types.ChatPermissions(can_send_messages=True), until_date=until_date)
+
+        await bot.send_message(message.chat.id, "Сіз 1 айға қосылдыңыз!")
+        await asyncio.sleep(30 * 24 * 60 * 60)  # 30 күн күту
+        await bot.send_message(message.chat.id, "1 ай уақытыңыз бітті. Қайта төлем жасау керек.")
+        await bot.ban_chat_member(CHANNEL_ID, message.from_user.id)
+
+    else:
+        await message.reply("Қате чек. 1990 теңгелік чекті жүктеңіз.")
+
+if name == '__main__':
+    executor.start_polling(dp)
